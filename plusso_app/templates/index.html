@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plusso – Stundenverrechnungssatz Rechner</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">P<span>+</span>lusso</div>
+    <p>One‑Click SVS Rechner für Handwerk (Schreiner, Parkettleger, Zimmerer u. a.)</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Schritt-für-Schritt zum Stundenverrechnungssatz</h1>
+      <ol class="steps">
+        <li>BWA-Werte eingeben</li>
+        <li>Produktive Stunden + Mitarbeiter erfassen</li>
+        <li>SVS und Benchmark auswerten</li>
+      </ol>
+
+      <div class="grid">
+        <label>Tier
+          <select id="tier">
+            <option value="1">Tier 1 (kostenlos)</option>
+            <option value="2">Tier 2 (Smart Input)</option>
+            <option value="3">Tier 3 (Pro Intelligence)</option>
+          </select>
+        </label>
+
+        <label>Betrieb / Marke
+          <input id="brandName" type="text" placeholder="Plusso" />
+        </label>
+
+        <label>Kontaktdaten
+          <input id="contactData" type="text" placeholder="Telefon / E-Mail" />
+        </label>
+
+        <label>Gesamtkosten aus BWA (EUR)
+          <input id="totalCosts" type="number" min="0" step="0.01" />
+        </label>
+
+        <label>Mitarbeiteranzahl
+          <input id="employeeCount" type="number" min="1" step="1" />
+        </label>
+
+        <label>Produktive Stunden je MA (Zeitraum)
+          <input id="productiveHours" type="number" min="1" step="0.5" />
+        </label>
+
+        <label>Risikopuffer (%)
+          <input id="riskBuffer" type="number" min="0" step="0.1" value="0" />
+        </label>
+
+        <label>Benchmark regional (EUR/h, optional)
+          <input id="regionalAvg" type="number" min="0" step="0.01" placeholder="z. B. 78.5" />
+        </label>
+      </div>
+
+      <div class="hint" id="tierHint"></div>
+
+      <button id="calcBtn">Jetzt berechnen</button>
+
+      <article id="result" class="result hidden">
+        <h2>Ergebnis</h2>
+        <p><strong>Aktueller SVS:</strong> <span id="svs">-</span> EUR/h</p>
+        <p><strong>SVS ohne Risikopuffer:</strong> <span id="baseSvs">-</span> EUR/h</p>
+        <p><strong>Risikopuffer-Betrag:</strong> <span id="riskAmount">-</span> EUR/h</p>
+        <p><strong>Benchmark-Vergleich:</strong> <span id="benchmark">-</span></p>
+        <p><strong>Whitelabel:</strong> <span id="whitelabel">-</span></p>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Upload (Tier 2/3 Vorstufe)</h2>
+      <p>Foto/PDF/Screenshot-Upload ist vorbereitet. In diesem MVP werden Daten noch manuell geprüft und erfasst.</p>
+      <input type="file" accept="image/*,.pdf" />
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

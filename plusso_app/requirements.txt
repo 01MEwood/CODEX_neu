@@ -1,0 +1,1 @@
+# Keine externen Abhängigkeiten für das MVP erforderlich.
