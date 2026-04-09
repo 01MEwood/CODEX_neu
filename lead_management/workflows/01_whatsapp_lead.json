@@ -1,0 +1,134 @@
+{
+  "name": "Schreinerhelden — WhatsApp Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wa-webhook",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// WhatsApp Business API Payload normalisieren\nconst input = $input.all()[0].json;\n\n// Meta WhatsApp Cloud API Format\nconst entry = input.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\nconst contact = value?.contacts?.[0];\n\nif (!message) {\n  // Kein Message-Event (z.B. Status-Update) — ignorieren\n  return [{ json: { skip: true } }];\n}\n\nreturn [{\n  json: {\n    telefon: message.from,\n    name: contact?.profile?.name || 'Unbekannt',\n    nachricht: message.text?.body || message.caption || '[Media]',\n    quelle: 'WhatsApp',\n    type: message.type\n  }\n}];"
+      },
+      "id": "wa-normalize",
+      "name": "Normalize WhatsApp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "wa-filter",
+      "name": "Nur echte Nachrichten",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEOS_API_URL }}/api/v1/webhook/whatsapp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MEOS_WEBHOOK_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telefon",
+              "value": "={{ $json.telefon }}"
+            },
+            {
+              "name": "name",
+              "value": "={{ $json.name }}"
+            },
+            {
+              "name": "nachricht",
+              "value": "={{ $json.nachricht }}"
+            },
+            {
+              "name": "quelle",
+              "value": "={{ $json.quelle }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wa-to-meos",
+      "name": "An MEOS:BASE senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"status\": \"received\" }",
+        "options": {}
+      },
+      "id": "wa-respond",
+      "name": "200 OK antworten",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 240]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [{ "node": "Normalize WhatsApp", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize WhatsApp": {
+      "main": [
+        [{ "node": "Nur echte Nachrichten", "type": "main", "index": 0 }]
+      ]
+    },
+    "Nur echte Nachrichten": {
+      "main": [
+        [{ "node": "An MEOS:BASE senden", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "An MEOS:BASE senden": {
+      "main": [
+        [{ "node": "200 OK antworten", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "Schreinerhelden" },
+    { "name": "Lead Management" }
+  ]
+}

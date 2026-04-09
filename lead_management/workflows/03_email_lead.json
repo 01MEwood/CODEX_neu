@@ -1,0 +1,101 @@
+{
+  "name": "Schreinerhelden — Email Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            { "mode": "everyMinute", "minute": 2 }
+          ]
+        },
+        "mailbox": "INBOX",
+        "simple": false,
+        "options": {
+          "customEmailConfig": "={{ $env.EMAIL_IMAP_CONFIG }}"
+        }
+      },
+      "id": "email-trigger",
+      "name": "Email Trigger (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "notes": "Prüft info@schreinerhelden.de alle 2 Minuten auf neue Mails"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Email-Daten normalisieren\nconst email = $input.all()[0].json;\n\n// Absender parsen: \"Max Müller <max@example.de>\" → Name + Email\nconst fromRaw = email.from?.text || email.from || '';\nlet fromName = '';\nlet fromEmail = '';\n\nconst match = fromRaw.match(/^(.+?)\\s*<(.+)>$/);\nif (match) {\n  fromName = match[1].trim().replace(/\"/g, '');\n  fromEmail = match[2].trim();\n} else {\n  fromEmail = fromRaw.trim();\n}\n\nreturn [{\n  json: {\n    from_name: fromName,\n    from: fromEmail,\n    subject: email.subject || '(kein Betreff)',\n    body: email.text || email.html?.replace(/<[^>]*>/g, '') || '',\n    date: email.date\n  }\n}];"
+      },
+      "id": "email-normalize",
+      "name": "Email normalisieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.from }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "email-filter",
+      "name": "Hat Absender?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEOS_API_URL }}/api/v1/webhook/email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MEOS_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from_name\": \"{{ $json.from_name }}\",\n  \"from\": \"{{ $json.from }}\",\n  \"subject\": \"{{ $json.subject }}\",\n  \"body\": {{ JSON.stringify($json.body) }},\n  \"quelle\": \"Email\"\n}",
+        "options": {}
+      },
+      "id": "email-to-meos",
+      "name": "An MEOS:BASE senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 240]
+    }
+  ],
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [{ "node": "Email normalisieren", "type": "main", "index": 0 }]
+      ]
+    },
+    "Email normalisieren": {
+      "main": [
+        [{ "node": "Hat Absender?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hat Absender?": {
+      "main": [
+        [{ "node": "An MEOS:BASE senden", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "Schreinerhelden" },
+    { "name": "Lead Management" }
+  ]
+}

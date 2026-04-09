@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  lead-api:
+    build: .
+    container_name: meos-lead-api
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    networks:
+      - meos-net
+
+networks:
+  meos-net:
+    external: true
+    name: n8n_default  # Gleicher Docker-Network wie dein n8n

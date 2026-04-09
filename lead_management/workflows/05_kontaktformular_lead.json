@@ -1,0 +1,89 @@
+{
+  "name": "Schreinerhelden — Kontaktformular Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kontaktformular-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cf-webhook",
+      "name": "Kontaktformular Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "notes": "WordPress CF7 / WPForms sendet Daten hierher (per Plugin oder functions.php Hook)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WordPress Kontaktformular-Payload normalisieren\n// Unterstützt Contact Form 7, WPForms, Gravity Forms\nconst input = $input.all()[0].json;\n\n// CF7 Felder: your-name, your-email, your-phone, your-message\n// WPForms: name, email, phone, message\n// Gravity: input_1, input_2, etc.\n\nreturn [{\n  json: {\n    name: input['your-name'] || input.name || input.input_1 || null,\n    email: input['your-email'] || input.email || input.input_2 || null,\n    telefon: input['your-phone'] || input.phone || input.telefon || input.input_3 || null,\n    nachricht: input['your-message'] || input.message || input.nachricht || input.input_4 || '',\n    quelle: input.form_name || input._wpcf7_container_post || 'Website Kontaktformular',\n    page_url: input.page_url || input.referrer || null\n  }\n}];"
+      },
+      "id": "cf-normalize",
+      "name": "Formular normalisieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEOS_API_URL }}/api/v1/webhook/kontaktformular",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MEOS_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"your-name\": \"{{ $json.name }}\",\n  \"your-email\": \"{{ $json.email }}\",\n  \"your-phone\": \"{{ $json.telefon }}\",\n  \"your-message\": {{ JSON.stringify($json.nachricht) }},\n  \"quelle\": \"{{ $json.quelle }}\"\n}",
+        "options": {}
+      },
+      "id": "cf-to-meos",
+      "name": "An MEOS:BASE senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"status\": \"received\" }",
+        "options": {}
+      },
+      "id": "cf-respond",
+      "name": "200 OK antworten",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Kontaktformular Webhook": {
+      "main": [
+        [{ "node": "Formular normalisieren", "type": "main", "index": 0 }]
+      ]
+    },
+    "Formular normalisieren": {
+      "main": [
+        [{ "node": "An MEOS:BASE senden", "type": "main", "index": 0 }]
+      ]
+    },
+    "An MEOS:BASE senden": {
+      "main": [
+        [{ "node": "200 OK antworten", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "Schreinerhelden" },
+    { "name": "Lead Management" }
+  ]
+}

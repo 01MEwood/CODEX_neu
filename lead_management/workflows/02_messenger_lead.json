@@ -1,0 +1,143 @@
+{
+  "name": "Schreinerhelden — Messenger Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "=GET",
+        "path": "messenger-verify",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "msg-verify",
+      "name": "Messenger Verify",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 140],
+      "notes": "Meta Webhook Verification (GET mit hub.challenge)"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "messenger-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "msg-webhook",
+      "name": "Messenger Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Facebook Messenger Webhook Payload normalisieren\nconst input = $input.all()[0].json;\n\nconst entry = input.entry?.[0];\nconst messaging = entry?.messaging?.[0];\n\nif (!messaging || !messaging.message) {\n  return [{ json: { skip: true } }];\n}\n\nconst senderId = messaging.sender?.id;\nconst messageText = messaging.message?.text || '[Attachment]';\n\n// Absender-Name über Graph API holen (braucht Page Token)\n// Das macht n8n im nächsten Schritt\n\nreturn [{\n  json: {\n    sender_id: senderId,\n    message: messageText,\n    quelle: 'Facebook Messenger',\n    timestamp: messaging.timestamp\n  }\n}];"
+      },
+      "id": "msg-normalize",
+      "name": "Normalize Messenger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "msg-filter",
+      "name": "Nur echte Nachrichten",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 360]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/{{ $json.sender_id }}?fields=name&access_token={{ $env.MESSENGER_PAGE_TOKEN }}",
+        "options": {}
+      },
+      "id": "msg-get-name",
+      "name": "Name von Facebook holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEOS_API_URL }}/api/v1/webhook/messenger",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MEOS_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sender_name\": \"{{ $json.name }}\",\n  \"message\": \"{{ $('Normalize Messenger').item.json.message }}\",\n  \"quelle\": \"Facebook Messenger\"\n}",
+        "options": {}
+      },
+      "id": "msg-to-meos",
+      "name": "An MEOS:BASE senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"status\": \"received\" }",
+        "options": {}
+      },
+      "id": "msg-respond",
+      "name": "200 OK antworten",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 360]
+    }
+  ],
+  "connections": {
+    "Messenger Webhook": {
+      "main": [
+        [{ "node": "Normalize Messenger", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize Messenger": {
+      "main": [
+        [{ "node": "Nur echte Nachrichten", "type": "main", "index": 0 }]
+      ]
+    },
+    "Nur echte Nachrichten": {
+      "main": [
+        [{ "node": "Name von Facebook holen", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Name von Facebook holen": {
+      "main": [
+        [{ "node": "An MEOS:BASE senden", "type": "main", "index": 0 }]
+      ]
+    },
+    "An MEOS:BASE senden": {
+      "main": [
+        [{ "node": "200 OK antworten", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "Schreinerhelden" },
+    { "name": "Lead Management" }
+  ]
+}

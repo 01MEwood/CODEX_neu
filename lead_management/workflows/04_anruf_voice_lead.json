@@ -1,0 +1,211 @@
+{
+  "name": "Schreinerhelden — Anruf / Voice-Memo Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "anruf-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "call-webhook",
+      "name": "Anruf Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 180],
+      "notes": "Sipgate / Telekom Webhook bei eingehendem Anruf"
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "tg-trigger",
+      "name": "Telegram Voice-Memo",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 420],
+      "notes": "Mario schickt Voice-Memo an Telegram-Bot nach Anruf"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sipgate / Telekom Anruf-Webhook normalisieren\nconst input = $input.all()[0].json;\n\nreturn [{\n  json: {\n    telefon: input.from || input.caller || input.remoteParty,\n    name: input.callerName || null,\n    type: 'anruf',\n    duration: input.duration || null,\n    quelle: 'Sipgate/Telefon'\n  }\n}];"
+      },
+      "id": "call-normalize",
+      "name": "Anruf normalisieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 180]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.voice }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "tg-has-voice",
+      "name": "Hat Voice?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 420]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/getFile?file_id={{ $json.message.voice.file_id }}",
+        "options": {}
+      },
+      "id": "tg-get-file",
+      "name": "Voice-Datei holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "de"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "whisper-transcribe",
+      "name": "Whisper Transkription",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 420],
+      "notes": "Voice-Memo → Text mit OpenAI Whisper"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEOS_API_URL }}/api/v1/webhook/anruf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MEOS_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telefon\": \"{{ $json.telefon || '' }}\",\n  \"name\": \"{{ $json.name || '' }}\",\n  \"type\": \"anruf\",\n  \"quelle\": \"Sipgate/Telefon\"\n}",
+        "options": {}
+      },
+      "id": "call-to-meos",
+      "name": "Anruf → MEOS:BASE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEOS_API_URL }}/api/v1/webhook/anruf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.MEOS_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"transkript\": {{ JSON.stringify($json.text) }},\n  \"type\": \"voice_memo\",\n  \"quelle\": \"Telegram Voice-Memo\"\n}",
+        "options": {}
+      },
+      "id": "voice-to-meos",
+      "name": "Voice-Memo → MEOS:BASE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"status\": \"received\" }",
+        "options": {}
+      },
+      "id": "call-respond",
+      "name": "200 OK (Anruf)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 180]
+    }
+  ],
+  "connections": {
+    "Anruf Webhook": {
+      "main": [
+        [{ "node": "Anruf normalisieren", "type": "main", "index": 0 }]
+      ]
+    },
+    "Anruf normalisieren": {
+      "main": [
+        [{ "node": "Anruf → MEOS:BASE", "type": "main", "index": 0 }]
+      ]
+    },
+    "Anruf → MEOS:BASE": {
+      "main": [
+        [{ "node": "200 OK (Anruf)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Telegram Voice-Memo": {
+      "main": [
+        [{ "node": "Hat Voice?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hat Voice?": {
+      "main": [
+        [{ "node": "Voice-Datei holen", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Voice-Datei holen": {
+      "main": [
+        [{ "node": "Whisper Transkription", "type": "main", "index": 0 }]
+      ]
+    },
+    "Whisper Transkription": {
+      "main": [
+        [{ "node": "Voice-Memo → MEOS:BASE", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "Schreinerhelden" },
+    { "name": "Lead Management" }
+  ]
+}
