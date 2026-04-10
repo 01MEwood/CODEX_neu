@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "info@schreinerhelden.de"
 
+    # --- Freund CRM ---
+    freund_crm_url: str = ""  # z.B. https://api.freund-crm.de
+    freund_crm_api_key: str = ""
+
+    # --- Buchungsseite ---
+    booking_url: str = ""  # z.B. https://calendly.com/schreinerhelden/beratung
+
     # --- n8n ---
     n8n_base_url: str = "https://n8n.dein-vps.de"
 

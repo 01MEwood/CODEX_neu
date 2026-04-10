@@ -59,6 +59,8 @@ class LeadUpdate(BaseModel):
     zustaendig: Optional[str] = None
     naechste_aktion: Optional[str] = None
     notizen: Optional[str] = None
+    kunde_id: Optional[str] = None
+    match_konfidenz: Optional[str] = None
 
 
 class Lead(BaseModel):
@@ -77,7 +79,10 @@ class Lead(BaseModel):
     notizen: Optional[str] = None
     quelle: Optional[str] = None
     raw_payload: Optional[dict] = None
+    kunde_id: Optional[str] = None  # Verknüpfter Kunde
+    match_konfidenz: Optional[str] = None  # exakt, hoch, mittel, kein
     erstantwort_gesendet: bool = False
+    buchung_angeboten: bool = False
     telegram_notified: bool = False
 
     class Config:
