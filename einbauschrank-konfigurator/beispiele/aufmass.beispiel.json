@@ -1,0 +1,39 @@
+{
+  "schema": "aufmass/v0.1",
+  "projekt": "beispiel.nische.flur",
+  "erfasst_am": "2026-08-17",
+  "erfassung": "sprache",
+  "einheit": "mm",
+  "nische": {
+    "breite": { "links": 2482, "rechts": 2478 },
+    "hoehe": { "vorne": 2410, "hinten": 2405 },
+    "tiefe": 620
+  },
+  "waende": {
+    "links": { "material": "mauerwerk_verputzt" },
+    "rechts": { "material": "mauerwerk_verputzt" },
+    "boden": { "belag": "parkett" }
+  },
+  "hindernisse": [
+    {
+      "id": "steckdose.1",
+      "typ": "steckdose",
+      "wand": "links",
+      "abstand_von_rueckwand": 300,
+      "hoehe_ueber_boden": null,
+      "behandlung": "aussparung"
+    },
+    {
+      "id": "sockelleiste.1",
+      "typ": "sockelleiste",
+      "waende": ["links", "rechts", "hinten"],
+      "hoehe": 60,
+      "tiefe": null,
+      "behandlung": "ausklinken"
+    }
+  ],
+  "offene_punkte": [
+    "steckdose.1: Höhe über Boden fehlt — nachmessen",
+    "sockelleiste.1: Tiefe fehlt — nachmessen"
+  ]
+}

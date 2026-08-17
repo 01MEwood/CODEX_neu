@@ -1,0 +1,40 @@
+{
+  "schema": "werkregeln/v0.1",
+  "stand": "2026-08",
+  "hinweis": "Skizze zur Illustration der Struktur — Werte sind Platzhalter, die echte Werk-DNA (SCHRANK:WERK) wird in Stufe 0/2 erfasst.",
+  "raster": {
+    "system": 32,
+    "lochreihe_von_vorne": 37,
+    "lochreihe_von_hinten": 37
+  },
+  "fachbreiten": {
+    "boden_19mm_max": 900,
+    "boden_25mm_max": 1100,
+    "kleiderstange_max": 1200,
+    "regel_bei_verstoss": "rueckfrage_mit_optionen"
+  },
+  "nischenausgleich": {
+    "toleranz_ohne_passleiste": 3,
+    "passleiste_mindestbreite": 20,
+    "passleiste_seiten": "beide",
+    "kommentar": "Ausgleich wird aus Mehrpunktmaß gerechnet: kleinste Breite trägt den Korpus, Differenzen gehen in Passleisten"
+  },
+  "baenderseite": {
+    "standard": "raumseitig_oeffnend",
+    "kommentar": "Rückfrage, wenn Raumsituation im Aufmaß nicht eindeutig"
+  },
+  "verbindungen": {
+    "konstruktionsboden_zu_seite": { "prinzip": "exzenter", "beschlag": "beschlaege/exzenter_15.json" },
+    "boden_verstellbar": { "prinzip": "bodentraeger", "beschlag": "beschlaege/bodentraeger_5.json" },
+    "rueckwand_zu_korpus": { "prinzip": "nut", "nut_tiefe": 8, "nut_von_hinten": 15 }
+  },
+  "kanten": {
+    "sichtkante": "abs_2mm",
+    "innenkante": "abs_08mm",
+    "massabzug": "automatisch"
+  },
+  "fronten": {
+    "fuge": 3,
+    "grifflos": { "prinzip": "griffleiste_gefraest", "beschlag": "beschlaege/griffleiste_profil.json" }
+  }
+}

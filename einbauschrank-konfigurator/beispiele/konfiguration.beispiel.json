@@ -1,0 +1,36 @@
+{
+  "schema": "konfiguration/v0.1",
+  "projekt": "beispiel.nische.flur",
+  "aufmass_ref": "aufmass.beispiel.json",
+  "werkregeln_ref": "werkregeln/v0.1",
+  "korpus": {
+    "material": "spanplatte_weiss_19",
+    "rueckwand": "hdf_8_genutet",
+    "sockel": { "typ": "stellfuesse", "hoehe": "auto" }
+  },
+  "front": {
+    "stil": "grifflos",
+    "material": "mdf_lack_19",
+    "fugenbild": "werkstandard"
+  },
+  "elemente": [
+    {
+      "id": "element.links",
+      "breite": "auto",
+      "preset": "kleiderstange.doppelt"
+    },
+    {
+      "id": "element.mitte",
+      "breite": "auto",
+      "preset": "boeden",
+      "parameter": { "anzahl_boeden": 5, "verstellbar": true }
+    },
+    {
+      "id": "element.rechts",
+      "breite": "auto",
+      "preset": "schubladen",
+      "parameter": { "anzahl": 4, "auszug": "vollauszug_softclose" }
+    }
+  ],
+  "abweichungen": []
+}
