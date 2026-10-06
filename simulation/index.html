@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Schreinerhelden Werkstattfluss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky control bar → KPI strip → full-width animated process board (snake flow) → three panels: levers, stations, live log */
+:root{
+  --bg:#EBEEF0; --surface:#FFFFFF; --card:#F4F6F8; --ink:#141A1F; --muted:#5D6873; --line:#D6DCE1;
+  --accent:#111827; --accent-ink:#FFFFFF; --focus:#2F74D8;
+  --good:#22A05A; --mid:#E0A21B; --warn:#E5484D; --warn-ink:#FFFFFF;
+  --p-kueche:#2F74D8; --p-schrank:#F07F1F; --p-bad:#13A898; --p-tisch:#D93C78;
+  --ph-vertrieb:#7C5CF0; --ph-planung:#E0A21B; --ph-werkstatt:#A86B38; --ph-montage:#22A05A; --ph-abschluss:#2F74D8;
+  --shadow:0 1px 2px rgba(20,26,31,.05),0 8px 24px -12px rgba(20,26,31,.18);
+  --f-display:'Bricolage Grotesque','Manrope',system-ui,sans-serif;
+  --f-body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:18px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1114; --surface:#151B20; --card:#1C242A; --ink:#E9EEF2; --muted:#93A1AD; --line:#2A343C;
+  --accent:#F3F5F7; --accent-ink:#0D1114; --focus:#6FA6FF;
+  --good:#3CCB7A; --mid:#F2B93B; --warn:#FF6369; --warn-ink:#1A0D0E;
+  --p-kueche:#5B9BFF; --p-schrank:#FF9A45; --p-bad:#2DD4BF; --p-tisch:#FF5C9A;
+  --ph-vertrieb:#A08BFF; --ph-planung:#F2B93B; --ph-werkstatt:#D69560; --ph-montage:#3CCB7A; --ph-abschluss:#5B9BFF;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1114; --surface:#151B20; --card:#1C242A; --ink:#E9EEF2; --muted:#93A1AD; --line:#2A343C;
+  --accent:#F3F5F7; --accent-ink:#0D1114; --focus:#6FA6FF;
+  --good:#3CCB7A; --mid:#F2B93B; --warn:#FF6369; --warn-ink:#1A0D0E;
+  --p-kueche:#5B9BFF; --p-schrank:#FF9A45; --p-bad:#2DD4BF; --p-tisch:#FF5C9A;
+  --ph-vertrieb:#A08BFF; --ph-planung:#F2B93B; --ph-werkstatt:#D69560; --ph-montage:#3CCB7A; --ph-abschluss:#5B9BFF;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.page{max-width:1280px;margin:0 auto;padding-inline:20px;padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+h1,h2{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(28px,4.2vw,44px);line-height:1.05;font-weight:700}
+h2{font-size:18px;font-weight:600}
+.eyebrow{margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{margin:10px 0 0;max-width:62ch;color:var(--muted)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.top .intro{min-width:0;flex:1 1 420px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;
+  background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 18px;box-shadow:var(--shadow)}
+.clock{display:flex;align-items:baseline;gap:10px;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.clock b{font-size:13px;color:var(--muted);font-weight:500}
+.clock span{font-size:17px}
+.live{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 var(--good);animation:pulse 1.6s infinite}
+.paused .live{background:var(--muted);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 60%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+.ctrls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:14px}
+.btn:hover{background:var(--card)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);min-width:104px}
+.btn.primary:hover{opacity:.9}
+.seg{display:flex;background:var(--card);border-radius:999px;padding:3px;border:1px solid var(--line)}
+.seg button{border:0;background:none;padding:4px 11px;border-radius:999px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);font-family:var(--f-mono)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.kpi .k{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:var(--f-display);font-size:28px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi .s{font-size:13px;color:var(--muted)}
+.kpi.alert{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));background:color-mix(in srgb,var(--warn) 7%,var(--surface))}
+.kpi.alert .v{color:var(--warn)}
+
+.board{background:var(--surface);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:16px;box-shadow:var(--shadow)}
+.board-head{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;align-items:center;margin-bottom:6px}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--line)}
+#board-wrap{width:100%;position:relative}
+#board{display:block;width:100%}
+
+.lower{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.panel p.hint{margin:-8px 0 0;font-size:13px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.chip:hover{border-color:var(--muted)}
+.field{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.field label{font-weight:600;font-size:14px}
+.field output{font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+.field input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+.field small{grid-column:1/-1;color:var(--muted);font-size:12px;margin-top:-2px}
+
+.stations{display:flex;flex-direction:column}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) auto 86px;gap:4px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.srow:first-child{border-top:0}
+.sname{min-width:0;display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.sname i{width:8px;height:8px;border-radius:2px;flex:none}
+.sname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow.hot .sname span{color:var(--warn)}
+.step{display:flex;align-items:center;gap:2px;font-family:var(--f-mono);font-size:14px}
+.step button{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:700;line-height:1;padding:0}
+.step button:disabled{opacity:.35;cursor:default}
+.step output{min-width:22px;text-align:center}
+.step .na{font-size:12px;color:var(--muted);font-family:var(--f-body)}
+.ubar{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ubar .track{flex:1;height:5px;border-radius:9px;background:var(--card);overflow:hidden}
+.ubar .fill{height:100%;border-radius:9px;background:var(--good);transition:width .3s,background .3s}
+.qn{font-family:var(--f-mono);font-size:12px;white-space:nowrap;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+
+#log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
+#log li{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:baseline}
+#log time{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+#log .k{width:7px;height:7px;border-radius:50%;background:var(--muted);transform:translateY(-1px)}
+#log .good .k{background:var(--good)} #log .bad .k{background:var(--warn)} #log .info .k{background:var(--ph-abschluss)}
+.foot{margin:0;font-size:13px;color:var(--muted);max-width:80ch}
+@media (max-width:560px){.bar{border-radius:18px;padding:10px 12px}.kpi .v{font-size:24px}.board{padding:12px}}
+@media (prefers-reduced-motion: reduce){.live{animation:none}}
+</style>
+
+<div class="page" id="app">
+  <header class="top">
+    <div class="intro">
+      <p class="eyebrow">Schreinerhelden · Prozess-Simulation</p>
+      <h1>Werkstattfluss</h1>
+      <p class="lede">Von der Anfrage bis zur bezahlten Rechnung: Jeder Punkt ist ein Auftrag, der durch Ihre Schreinerei wandert. Ändern Sie Personal, Anfragen und Abschlussquote und sehen Sie live, wo es sich staut.</p>
+    </div>
+  </header>
+
+  <div class="bar" id="bar">
+    <span class="live" aria-hidden="true"></span>
+    <div class="clock" aria-live="off"><b id="clk-week">KW 41</b><span id="clk-time">Mo 07:00</span></div>
+    <div class="ctrls">
+      <button class="btn primary" id="btn-play" type="button">Pause</button>
+      <div class="seg" role="group" aria-label="Tempo">
+        <button type="button" data-speed="1" aria-pressed="false">1×</button>
+        <button type="button" data-speed="3" aria-pressed="true">3×</button>
+        <button type="button" data-speed="10" aria-pressed="false">10×</button>
+      </div>
+      <button class="btn" id="btn-reset" type="button">Neu starten</button>
+    </div>
+  </div>
+
+  <section class="kpis" aria-label="Kennzahlen">
+    <div class="kpi"><span class="k">Bezahlte Aufträge</span><span class="v" id="k-done">0</span><span class="s" id="k-done-s">–</span></div>
+    <div class="kpi"><span class="k">Ø Durchlaufzeit</span><span class="v" id="k-lead">–</span><span class="s">Auftrag bis Zahlungseingang</span></div>
+    <div class="kpi"><span class="k">Lohnumsatz</span><span class="v" id="k-rev">0 €</span><span class="s" id="k-rev-s">–</span></div>
+    <div class="kpi" id="k-bn-tile"><span class="k">Engpass</span><span class="v" id="k-bn">–</span><span class="s" id="k-bn-s">–</span></div>
+    <div class="kpi"><span class="k">Angebote ohne Auftrag</span><span class="v" id="k-lost">0 h</span><span class="s" id="k-lost-s">–</span></div>
+  </section>
+
+  <section class="board" aria-label="Auftragsfluss">
+    <div class="board-head">
+      <h2>Auftragsfluss</h2>
+      <ul class="legend" id="legend"></ul>
+    </div>
+    <div id="board-wrap"><canvas id="board" role="img" aria-label="Animierte Darstellung der elf Prozessschritte von der Anfrage bis zur Zahlung. Die Werte stehen auch in der Stationsliste unten."></canvas></div>
+  </section>
+
+  <section class="lower">
+    <div class="panel">
+      <h2>Stellschrauben</h2>
+      <p class="hint">Änderungen wirken sofort, ohne Neustart.</p>
+      <div class="chips" id="scenarios"></div>
+      <div class="field"><label for="in-rate">Anfragen pro Woche</label><output id="out-rate" for="in-rate">10</output>
+        <input id="in-rate" type="range" min="2" max="30" step="1" value="10"></div>
+      <div class="field"><label for="in-quote">Abschlussquote</label><output id="out-quote" for="in-quote">45 %</output>
+        <input id="in-quote" type="range" min="10" max="90" step="5" value="45">
+        <small>Anteil der Angebote, aus denen ein Auftrag wird</small></div>
+      <div class="field"><label for="in-eur">Stundenverrechnungssatz</label><output id="out-eur" for="in-eur">68 €/h</output>
+        <input id="in-eur" type="range" min="40" max="120" step="1" value="68">
+        <small>Bewertet Werkstatt- und Montagestunden als Lohnumsatz</small></div>
+    </div>
+    <div class="panel">
+      <h2>Stationen &amp; Personal</h2>
+      <p class="hint">Plus und Minus ändern die Zahl der Leute oder Maschinen pro Station.</p>
+      <div class="stations" id="stations"></div>
+    </div>
+    <div class="panel">
+      <h2>Was gerade passiert</h2>
+      <ol id="log" aria-live="off"></ol>
+    </div>
+  </section>
+
+  <p class="foot">Beispielwerte: Bearbeitungszeiten, Produktmix und Quoten sind typische Annahmen für eine Möbelschreinerei, keine Firmendaten. Gerechnet wird in Arbeitsstunden (8 h pro Tag, 5 Tage pro Woche); Bearbeitungszeiten streuen zufällig und wachsen mit der Auftragsgröße.</p>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const HPW = 40, HPD = 8, DAYS = ['Mo','Di','Mi','Do','Fr'], START_KW = 41;
+const BASE = 1.2;          // Simulationsstunden pro Sekunde bei 1×
+const TRAVEL = 0.6;        // Wegezeit zwischen Stationen in h
+
+const PRODUCTS = [
+  {id:'kueche',  name:'Küche',         size:2.2, w:.25},
+  {id:'schrank', name:'Einbauschrank', size:1.0, w:.35},
+  {id:'bad',     name:'Badmöbel',      size:0.7, w:.20},
+  {id:'tisch',   name:'Esstisch',      size:0.6, w:.20},
+];
+const PHASES = {vertrieb:'Vertrieb', planung:'Planung', werkstatt:'Werkstatt', montage:'Montage', abschluss:'Abschluss'};
+const STATIONS = [
+  {id:'anfrage',  name:'Anfrage',             role:'Büro',          ph:'vertrieb',  cap:1, t:0.5,  scale:0},
+  {id:'aufmass',  name:'Beratung & Aufmaß',   role:'Meister',       ph:'vertrieb',  cap:1, t:3,    scale:.4},
+  {id:'planung',  name:'Planung & Angebot',   role:'CAD-Planung',   ph:'planung',   cap:1, t:3.2,  scale:.7},
+  {id:'entscheid',name:'Kunde entscheidet',   role:'Angebot offen', ph:'planung',   cap:0, decision:true},
+  {id:'av',       name:'Arbeitsvorbereitung', role:'AV & Einkauf',  ph:'werkstatt', cap:1, t:2.5,  scale:.5, bill:true},
+  {id:'cnc',      name:'Zuschnitt & CNC',     role:'CNC',           ph:'werkstatt', cap:1, t:5,    scale:1,  bill:true},
+  {id:'kante',    name:'Kante & Bohren',      role:'Kantenanleimer',ph:'werkstatt', cap:1, t:3.5,  scale:1,  bill:true},
+  {id:'bank',     name:'Bankraum',            role:'Schreiner',     ph:'werkstatt', cap:2, t:12,   scale:1,  bill:true},
+  {id:'oberfl',   name:'Oberfläche',          role:'Lackierung',    ph:'werkstatt', cap:1, t:5,    scale:.8, bill:true},
+  {id:'montage',  name:'Montage beim Kunden', role:'Montageteam',   ph:'montage',   cap:1, t:6,    scale:1,  bill:true},
+  {id:'rechnung', name:'Rechnung & Zahlung',  role:'Büro',          ph:'abschluss', cap:1, t:.75,  scale:0},
+];
+const N = STATIONS.length, LAST = N - 1;
+const DEFAULT = {rate:10, quote:45, eur:68, caps:Object.fromEntries(STATIONS.map(s => [s.id, s.cap]))};
+const SCENARIOS = [
+  {name:'Normalbetrieb', apply:c => Object.assign(c, {rate:10, quote:45, caps:{...DEFAULT.caps}})},
+  {name:'Auftragsflut', apply:c => Object.assign(c, {rate:20, quote:55})},
+  {name:'Zweiter Planer', apply:c => { c.caps.planung = 2; c.caps.aufmass = 2; }},
+  {name:'Schreiner krank', apply:c => { c.caps.bank = 1; }},
+  {name:'Zweites Montageteam', apply:c => { c.caps.montage = 2; }},
+];
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let cfg = structuredClone(DEFAULT);
+let S, FX = [], running = !reduce, speed = 3, logVer = 0, shownLog = -1;
+
+/* ---------- Simulation ---------- */
+const rand = (a, b) => a + Math.random() * (b - a);
+const expo = m => -Math.log(1 - Math.random()) * m;
+function pickProduct(){ let r = Math.random(); for (const p of PRODUCTS){ if ((r -= p.w) < 0) return p; } return PRODUCTS[1]; }
+const label = j => `${j.p.name} #${String(j.id).padStart(3,'0')}`;
+
+function fresh(){
+  return {t:0, next:expo(HPW / cfg.rate), jobs:[], seq:1, st:STATIONS.map(() => ({queue:[], busy:[], util:0})),
+          done:0, lost:0, orders:0, lostH:0, rev:0, lead:[], log:[]};
+}
+function log(text, kind){ S.log.unshift({t:S.t, text, kind}); if (S.log.length > 30) S.log.length = 30; logVer++; }
+
+function spawn(){
+  const j = {id:S.seq++, p:pickProduct(), state:'travel', from:-1, to:0, tp:0, h:{}, born:S.t};
+  S.jobs.push(j);
+  log(`Neue Anfrage: ${label(j)}`, 'info');
+}
+function travel(j, from, to){ j.state = 'travel'; j.from = from; j.to = to; j.tp = 0; }
+function arrive(j, i){
+  j.pos = i;
+  const s = S.st[i];
+  if (STATIONS[i].decision){ j.state = 'wait'; j.rem = j.dur = rand(16, 56); s.busy.push(j); }
+  else { j.state = 'queue'; s.queue.push(j); }
+}
+function start(j, i){
+  const d = STATIONS[i];
+  const dur = d.t * (1 - d.scale + d.scale * j.p.size) * rand(.75, 1.3);
+  j.rem = j.dur = dur; j.h[d.id] = dur; j.state = 'service';
+  S.st[i].busy.push(j);
+}
+function complete(j, i){
+  const s = S.st[i];
+  s.busy.splice(s.busy.indexOf(j), 1);
+  if (STATIONS[i].decision){
+    if (Math.random() * 100 < cfg.quote){
+      j.orderAt = S.t; S.orders++;
+      log(`${label(j)}: Auftrag erteilt`, 'good');
+      travel(j, i, i + 1);
+    } else {
+      const h = (j.h.aufmass || 0) + (j.h.planung || 0);
+      S.lost++; S.lostH += h; j.state = 'gone';
+      FX.push({kind:'lost', i, p:j.p, age:0});
+      log(`${label(j)}: Absage nach ${h.toFixed(1).replace('.', ',')} h Angebotsarbeit`, 'bad');
+    }
+    return;
+  }
+  if (i === LAST){
+    const billH = STATIONS.filter(d => d.bill).reduce((a, d) => a + (j.h[d.id] || 0), 0);
+    const r = billH * cfg.eur;
+    S.done++; S.rev += r; S.lead.push((S.t - j.orderAt) / HPD); j.state = 'gone';
+    FX.push({kind:'done', i, p:j.p, age:0, parts:Array.from({length:14}, () => ({a:rand(0, Math.PI*2), v:rand(30, 80)}))});
+    log(`${label(j)}: bezahlt, ${eur(r)} Lohnumsatz`, 'good');
+    return;
+  }
+  travel(j, i, i + 1);
+}
+function step(dt){
+  S.t += dt;
+  while (S.t >= S.next){ spawn(); S.next += expo(HPW / cfg.rate); }
+  for (const j of S.jobs) if (j.state === 'travel'){ j.tp += dt / TRAVEL; if (j.tp >= 1) arrive(j, j.to); }
+  STATIONS.forEach((d, i) => {
+    const s = S.st[i];
+    for (const j of s.busy.slice()){ j.rem -= dt; if (j.rem <= 0) complete(j, i); }
+    if (d.decision) return;
+    const cap = cfg.caps[d.id];
+    while (s.busy.length < cap && s.queue.length) start(s.queue.shift(), i);
+    s.util += (Math.min(s.busy.length, cap) / cap - s.util) * Math.min(1, dt / 30);
+  });
+  if (S.jobs.some(j => j.state === 'gone')) S.jobs = S.jobs.filter(j => j.state !== 'gone');
+}
+function advance(h){ while (h > 0){ const d = Math.min(h, .05); step(d); h -= d; } }
+function bottleneck(){
+  let best = -1, score = -1;
+  STATIONS.forEach((d, i) => {
+    if (d.decision) return;
+    const s = S.st[i], sc = s.util + Math.min(s.queue.length, 12) * .04;
+    if (sc > score){ score = sc; best = i; }
+  });
+  return S.st[best].util > .72 || S.st[best].queue.length > 2 ? best : -1;
+}
+
+/* ---------- Formatting ---------- */
+const eurF = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR', maximumFractionDigits:0});
+const eur = v => eurF.format(v);
+const num = (v, d = 0) => v.toLocaleString('de-DE', {minimumFractionDigits:d, maximumFractionDigits:d});
+function clockOf(t){
+  const w = Math.floor(t / HPW), d = Math.floor((t % HPW) / HPD), hh = 7 + (t % HPD);
+  const h = Math.floor(hh), m = Math.floor((hh - h) * 60);
+  return {kw:((START_KW - 1 + w) % 53) + 1, txt:`${DAYS[d]} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`};
+}
+
+/* ---------- Canvas ---------- */
+const cv = $('board'), ctx = cv.getContext('2d'), wrap = $('board-wrap');
+let W = 0, H = 0, cellW = 0, cellH = 0, bw = 0, bh = 0, P = [];
+let C = {};
+const TOKENS = ['surface','card','ink','muted','line','good','mid','warn','warn-ink','p-kueche','p-schrank','p-bad','p-tisch',
+  'ph-vertrieb','ph-planung','ph-werkstatt','ph-montage','ph-abschluss'];
+function readColors(){ const cs = getComputedStyle(document.documentElement); for (const k of TOKENS) C[k] = cs.getPropertyValue('--' + k).trim(); }
+const pc = p => C['p-' + p.id];
+
+function layout(){
+  W = wrap.clientWidth;
+  const cols = W >= 980 ? 4 : W >= 620 ? 3 : 2, rows = Math.ceil(N / cols);
+  cellW = W / cols; cellH = W < 620 ? 156 : 168;
+  bw = Math.min(cellW * .74, 250); bh = cellH - 46;
+  H = rows * cellH + 8;
+  P = STATIONS.map((_, i) => {
+    const r = Math.floor(i / cols); let c = i % cols; if (r % 2) c = cols - 1 - c;
+    return {x:c * cellW + cellW / 2, y:r * cellH + cellH / 2 + 8};
+  });
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function edge(i, j){
+  const a = P[i];
+  if (j < 0) return {x:a.x - bw / 2, y:a.y};
+  const b = P[j], dx = b.x - a.x, dy = b.y - a.y;
+  return Math.abs(dx) > Math.abs(dy) ? {x:a.x + Math.sign(dx) * bw / 2, y:a.y} : {x:a.x, y:a.y + Math.sign(dy) * bh / 2};
+}
+function rr(x, y, w, h, r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function circle(x, y, r){ ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); }
+function token(x, y, p, r){
+  circle(x, y, r + 2); ctx.fillStyle = C.surface; ctx.fill();
+  circle(x, y, r); ctx.fillStyle = pc(p); ctx.fill();
+}
+function fit(text, max){
+  if (ctx.measureText(text).width <= max) return text;
+  while (text.length > 1 && ctx.measureText(text + '…').width > max) text = text.slice(0, -1);
+  return text + '…';
+}
+const FONT = (w, s, fam = "'Manrope', system-ui, sans-serif") => `${w} ${s}px ${fam}`;
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+
+function drawConnector(a, b, now, flow){
+  ctx.save();
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.setLineDash([4, 6]);
+  ctx.lineDashOffset = flow ? -(now / 45) % 10 : 0;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  ctx.setLineDash([]);
+  const ang = Math.atan2(b.y - a.y, b.x - a.x);
+  ctx.fillStyle = C.muted; ctx.beginPath();
+  ctx.moveTo(b.x - 2 * Math.cos(ang), b.y - 2 * Math.sin(ang));
+  ctx.lineTo(b.x - 9 * Math.cos(ang) + 4 * Math.sin(ang), b.y - 9 * Math.sin(ang) - 4 * Math.cos(ang));
+  ctx.lineTo(b.x - 9 * Math.cos(ang) - 4 * Math.sin(ang), b.y - 9 * Math.sin(ang) + 4 * Math.cos(ang));
+  ctx.fill(); ctx.restore();
+}
+
+function drawStation(i, bn, now){
+  const d = STATIONS[i], s = S.st[i], {x, y} = P[i];
+  const bx = x - bw / 2, by = y - bh / 2, pad = bw < 150 ? 10 : 14, small = bw < 150;
+  const hot = i === bn;
+  rr(bx, by, bw, bh, 14); ctx.fillStyle = C.card; ctx.fill();
+  if (hot){
+    ctx.save(); ctx.globalAlpha = .1 + (reduce ? 0 : .05 * Math.sin(now / 250)); ctx.fillStyle = C.warn; ctx.fill(); ctx.restore();
+    ctx.lineWidth = 2; ctx.strokeStyle = C.warn; ctx.stroke();
+  } else { ctx.lineWidth = 1; ctx.strokeStyle = C.line; ctx.stroke(); }
+
+  // Phase + Name
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  rr(bx + pad, by + 13, 8, 8, 2); ctx.fillStyle = C['ph-' + d.ph]; ctx.fill();
+  ctx.font = FONT(700, 10); ctx.fillStyle = C.muted;
+  ctx.fillText(fit(PHASES[d.ph].toUpperCase() + (small ? '' : ' · ' + d.role), bw - pad * 2 - 14), bx + pad + 13, by + 17.5);
+  ctx.font = FONT(700, small ? 12.5 : 14); ctx.fillStyle = C.ink;
+  ctx.fillText(fit(d.name, bw - pad * 2), bx + pad, by + 37);
+
+  const rowY = by + 62;
+  if (d.decision){
+    ctx.font = FONT(600, 12); ctx.fillStyle = C.muted;
+    ctx.fillText(`${s.busy.length} Angebote offen`, bx + pad, rowY - 4);
+    const per = Math.max(1, Math.floor((bw - pad * 2) / 13));
+    s.busy.slice(0, per * 2).forEach((j, k) => {
+      const cx = bx + pad + 5 + (k % per) * 13, cy = rowY + 16 + Math.floor(k / per) * 13;
+      ctx.save(); ctx.globalAlpha = .35 + .65 * (1 - j.rem / j.dur); token(cx, cy, j.p, 4.5); ctx.restore();
+    });
+  } else {
+    const cap = cfg.caps[d.id], slots = Math.max(cap, s.busy.length), gap = small ? 20 : 23;
+    for (let k = 0; k < slots; k++){
+      const cx = bx + pad + 9 + k * gap, j = s.busy[k];
+      if (j){
+        const prog = 1 - Math.max(0, j.rem) / j.dur;
+        circle(cx, rowY, 9); ctx.fillStyle = pc(j.p); ctx.globalAlpha = .22; ctx.fill(); ctx.globalAlpha = 1;
+        circle(cx, rowY, 5); ctx.fillStyle = pc(j.p); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, rowY, 9, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+        ctx.strokeStyle = pc(j.p); ctx.lineWidth = 2.5; ctx.stroke();
+      } else {
+        circle(cx, rowY, 8); ctx.setLineDash([2, 3]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    ctx.textAlign = 'right'; ctx.font = FONT(500, 11, MONO); ctx.fillStyle = hot ? C.warn : C.muted;
+    ctx.fillText(Math.round(s.util * 100) + ' %', bx + bw - pad, rowY);
+    ctx.textAlign = 'left';
+    // Warteschlange
+    const qy = rowY + 24;
+    ctx.font = FONT(600, 11); ctx.fillStyle = C.muted;
+    const lbl = 'wartet', lw = ctx.measureText(lbl).width + 8;
+    ctx.fillText(lbl, bx + pad, qy);
+    if (!s.queue.length){ ctx.fillText('–', bx + pad + lw, qy); }
+    else {
+      const room = bw - pad * 2 - lw - 22, per = Math.max(1, Math.floor(room / 11));
+      s.queue.slice(0, per).forEach((j, k) => token(bx + pad + lw + 5 + k * 11, qy, j.p, 4));
+      if (s.queue.length > per){ ctx.fillStyle = hot ? C.warn : C.ink; ctx.font = FONT(700, 11);
+        ctx.fillText('+' + (s.queue.length - per), bx + pad + lw + per * 11 + 2, qy); }
+    }
+  }
+  // Auslastungsbalken
+  if (!d.decision){
+    const ux = bx + pad, uy = by + bh - 12, uw = bw - pad * 2;
+    rr(ux, uy, uw, 4, 2); ctx.fillStyle = C.line; ctx.fill();
+    rr(ux, uy, Math.max(4, uw * Math.min(1, s.util)), 4, 2);
+    ctx.fillStyle = s.util > .9 ? C.warn : s.util > .75 ? C.mid : C.good; ctx.fill();
+  }
+  if (hot){
+    ctx.font = FONT(700, 10.5); const t = 'ENGPASS', tw = ctx.measureText(t).width + 14;
+    rr(bx + bw - pad - tw, by - 9, tw, 18, 9); ctx.fillStyle = C.warn; ctx.fill();
+    ctx.fillStyle = C['warn-ink']; ctx.textAlign = 'center'; ctx.fillText(t, bx + bw - pad - tw / 2, by);
+    ctx.textAlign = 'left';
+  }
+}
+
+function draw(now){
+  ctx.clearRect(0, 0, W, H);
+  const flow = running && !reduce;
+  // Eingang
+  drawConnector({x:2, y:P[0].y}, edge(0, -1), now, flow);
+  for (let i = 0; i < LAST; i++) drawConnector(edge(i, i + 1), edge(i + 1, i), now, flow);
+  const bn = bottleneck();
+  for (let i = 0; i < N; i++) drawStation(i, bn, now);
+  // Unterwegs
+  for (const j of S.jobs){
+    if (j.state !== 'travel') continue;
+    const a = j.from < 0 ? {x:2, y:P[0].y} : edge(j.from, j.to), b = j.from < 0 ? edge(0, -1) : edge(j.to, j.from);
+    const t = Math.min(1, j.tp), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const bob = reduce ? 0 : Math.sin(now / 110 + j.id) * 1.5;
+    token(a.x + (b.x - a.x) * e, a.y + (b.y - a.y) * e + bob, j.p, 5 + j.p.size * 1.4);
+  }
+  // Effekte
+  for (const f of FX){
+    const {x, y} = P[f.i];
+    if (f.kind === 'lost'){
+      const k = f.age / 1.4;
+      ctx.save(); ctx.globalAlpha = 1 - k;
+      const fx = x + bw / 2 - 18, fy = y + bh / 2 - 8 + k * 34;
+      token(fx, fy, f.p, 6);
+      ctx.strokeStyle = C.warn; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(fx - 4, fy - 4); ctx.lineTo(fx + 4, fy + 4); ctx.moveTo(fx + 4, fy - 4); ctx.lineTo(fx - 4, fy + 4); ctx.stroke();
+      ctx.restore();
+    } else {
+      const k = f.age / 1.3;
+      ctx.save(); ctx.globalAlpha = 1 - k;
+      for (const p of f.parts){
+        circle(x + Math.cos(p.a) * p.v * k * 1.4, y + Math.sin(p.a) * p.v * k * 1.4, 3.5 * (1 - k * .5));
+        ctx.fillStyle = pc(f.p); ctx.fill();
+      }
+      ctx.font = FONT(700, 20, "'Bricolage Grotesque', system-ui, sans-serif"); ctx.textAlign = 'center';
+      ctx.fillStyle = C.good; ctx.fillText('€', x, y - bh / 2 - 6 - k * 26); ctx.textAlign = 'left';
+      ctx.restore();
+    }
+  }
+}
+
+/* ---------- UI ---------- */
+function buildUI(){
+  $('legend').innerHTML = PRODUCTS.map(p => `<li><span class="dot" style="background:var(--p-${p.id})"></span>${p.name}</li>`).join('');
+  $('scenarios').innerHTML = SCENARIOS.map((s, i) => `<button class="chip" type="button" data-sc="${i}">${s.name}</button>`).join('');
+  $('stations').innerHTML = STATIONS.map((d, i) => `
+    <div class="srow" id="sr-${i}">
+      <div class="sname"><i style="background:var(--ph-${d.ph})"></i><span title="${d.name}">${d.name}</span></div>
+      <div class="step">${d.decision ? '<span class="na">beim Kunden</span>' :
+        `<button type="button" data-st="${i}" data-d="-1" aria-label="${d.name}: eine Person weniger">−</button><output id="sc-${i}">1</output><button type="button" data-st="${i}" data-d="1" aria-label="${d.name}: eine Person mehr">+</button>`}</div>
+      <div class="qn" id="sq-${i}">–</div>
+      <div class="ubar"><div class="track"><div class="fill" id="su-${i}"></div></div><span id="sp-${i}">–</span></div>
+    </div>`).join('');
+}
+function syncInputs(){
+  $('in-rate').value = cfg.rate; $('in-quote').value = cfg.quote; $('in-eur').value = cfg.eur;
+  $('out-rate').textContent = cfg.rate; $('out-quote').textContent = cfg.quote + ' %'; $('out-eur').textContent = cfg.eur + ' €/h';
+}
+function ui(){
+  const c = clockOf(S.t);
+  $('clk-week').textContent = 'KW ' + c.kw; $('clk-time').textContent = c.txt;
+  $('btn-play').textContent = running ? 'Pause' : 'Start';
+  $('bar').classList.toggle('paused', !running);
+
+  const wip = S.jobs.filter(j => j.orderAt !== undefined).length;
+  $('k-done').textContent = num(S.done);
+  $('k-done-s').textContent = `${num(S.orders)} beauftragt · ${num(wip)} in Arbeit`;
+  const recent = S.lead.slice(-15);
+  $('k-lead').textContent = recent.length ? num(recent.reduce((a, b) => a + b, 0) / recent.length, 1) + ' Tage' : '–';
+  $('k-rev').textContent = eur(S.rev);
+  $('k-rev-s').textContent = S.t > 8 ? `Ø ${eur(S.rev / (S.t / HPW))} pro Woche` : '–';
+  const bn = bottleneck();
+  $('k-bn-tile').classList.toggle('alert', bn >= 0);
+  if (bn >= 0){ $('k-bn').textContent = STATIONS[bn].name; $('k-bn-s').textContent = `${Math.round(S.st[bn].util * 100)} % ausgelastet · ${S.st[bn].queue.length} wartend`; }
+  else { $('k-bn').textContent = 'keiner'; $('k-bn-s').textContent = 'Alle Stationen laufen flüssig'; }
+  $('k-lost').textContent = num(S.lostH) + ' h';
+  $('k-lost-s').textContent = `${num(S.lost)} Absagen · ${eur(S.lostH * cfg.eur)} unbezahlt`;
+
+  STATIONS.forEach((d, i) => {
+    const s = S.st[i];
+    $('sr-' + i).classList.toggle('hot', i === bn);
+    if (d.decision){ $('sq-' + i).textContent = s.busy.length + ' offen'; $('sp-' + i).textContent = 'Ø 1–7 Tage Bedenkzeit'; $('su-' + i).style.width = '0'; return; }
+    const cap = cfg.caps[d.id], u = Math.round(s.util * 100);
+    $('sc-' + i).textContent = cap;
+    $('sr-' + i).querySelector('[data-d="-1"]').disabled = cap <= 1;
+    $('sr-' + i).querySelector('[data-d="1"]').disabled = cap >= 6;
+    $('sq-' + i).textContent = s.queue.length + ' wartend';
+    $('sp-' + i).textContent = u + ' % Auslastung';
+    const f = $('su-' + i); f.style.width = Math.min(100, u) + '%';
+    f.style.background = s.util > .9 ? 'var(--warn)' : s.util > .75 ? 'var(--mid)' : 'var(--good)';
+  });
+
+  if (shownLog !== logVer){
+    shownLog = logVer;
+    $('log').innerHTML = S.log.slice(0, 8).map(e => `<li class="${e.kind}"><time>${clockOf(e.t).txt}</time><span class="k"></span><span>${e.text}</span></li>`).join('');
+  }
+}
+
+/* ---------- Events ---------- */
+$('btn-play').addEventListener('click', () => { running = !running; ui(); });
+$('btn-reset').addEventListener('click', () => { S = fresh(); FX = []; advance(3 * HPW); ui(); });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  speed = +b.dataset.speed;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+}));
+$('in-rate').addEventListener('input', e => { cfg.rate = +e.target.value; syncInputs(); });
+$('in-quote').addEventListener('input', e => { cfg.quote = +e.target.value; syncInputs(); });
+$('in-eur').addEventListener('input', e => { cfg.eur = +e.target.value; syncInputs(); ui(); });
+$('scenarios').addEventListener('click', e => {
+  const b = e.target.closest('[data-sc]'); if (!b) return;
+  const sc = SCENARIOS[+b.dataset.sc]; sc.apply(cfg); syncInputs();
+  log(`Szenario: ${sc.name}`, 'info'); ui();
+});
+$('stations').addEventListener('click', e => {
+  const b = e.target.closest('[data-st]'); if (!b) return;
+  const d = STATIONS[+b.dataset.st];
+  cfg.caps[d.id] = Math.max(1, Math.min(6, cfg.caps[d.id] + +b.dataset.d));
+  log(`${d.name}: jetzt ${cfg.caps[d.id]} ${cfg.caps[d.id] === 1 ? 'Kapazität' : 'Kapazitäten'}`, 'info'); ui();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+new ResizeObserver(layout).observe(wrap);
+
+/* ---------- Start ---------- */
+buildUI(); syncInputs(); readColors(); layout();
+S = fresh(); advance(3 * HPW);   // drei Wochen Vorlauf, damit die Werkstatt beim Öffnen schon läuft
+if (reduce) document.querySelector('.seg [data-speed="1"]').click();
+ui();
+let last = performance.now(), lastUI = 0;
+function frame(now){
+  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (running) advance(dt * BASE * speed);
+  for (const f of FX) f.age += dt;
+  FX = FX.filter(f => f.age < 1.4);
+  draw(now);
+  if (now - lastUI > 250){ ui(); lastUI = now; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
